@@ -13,7 +13,7 @@ RUN npm install --frozen-lockfile 2>/dev/null || npm install
 FROM node:20-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm ci 2>/dev/null || npm install
+RUN rm -f package-lock.json && npm install
 COPY . .
 RUN npm run build
 
