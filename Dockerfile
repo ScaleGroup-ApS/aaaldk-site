@@ -12,8 +12,8 @@ RUN npm install --frozen-lockfile 2>/dev/null || npm install
 # Stage 2: Build (install here so native deps match this platform)
 FROM node:20-slim AS build
 WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN rm -f package-lock.json && npm install
+COPY package.json ./
+RUN npm install
 COPY . .
 RUN npm run build
 
