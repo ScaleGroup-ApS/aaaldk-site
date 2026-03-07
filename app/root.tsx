@@ -36,6 +36,22 @@ export function Layout({ children }: { children: ReactNode }) {
       <body className="min-h-screen bg-surface text-text antialiased">
         {children}
         <ScrollRestoration />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              var _paq = window._paq = window._paq || [];
+              _paq.push(['trackPageView']);
+              _paq.push(['enableLinkTracking']);
+              (function() {
+                var u="https://scaleweb.matomo.cloud/";
+                _paq.push(['setTrackerUrl', u+'matomo.php']);
+                _paq.push(['setSiteId', '51']);
+                var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+                g.async=true; g.src='https://cdn.matomo.cloud/scaleweb.matomo.cloud/matomo.js'; s.parentNode.insertBefore(g,s);
+              })();
+            `,
+          }}
+        />
         <Scripts />
       </body>
     </html>
