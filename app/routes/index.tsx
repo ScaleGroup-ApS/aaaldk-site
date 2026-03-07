@@ -74,13 +74,22 @@ const SUBMENUS = [
   },
 ] as const;
 
+const MOBILE_MENU_LINKS: Array<{ href: string; label: string }> = [
+  ...SUBMENUS[0].links,
+  ...SUBMENUS[1].links,
+];
+
 export default function Index({ loaderData }: Route.ComponentProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpenIndex(null);
+      if (e.key === "Escape") {
+        setOpenIndex(null);
+        setMobileOpen(false);
+      }
     }
     function onClickOutside(e: MouseEvent) {
       if (navRef.current && !navRef.current.contains(e.target as Node)) {
@@ -94,6 +103,19 @@ export default function Index({ loaderData }: Route.ComponentProps) {
       document.removeEventListener("click", onClickOutside, true);
     };
   }, []);
+
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.classList.add("mobile-menu-open");
+    } else {
+      document.body.classList.remove("mobile-menu-open");
+    }
+    return () => document.body.classList.remove("mobile-menu-open");
+  }, [mobileOpen]);
+
+  function closeMobile() {
+    setMobileOpen(false);
+  }
 
   return (
     <div className="onepager">
@@ -112,6 +134,20 @@ export default function Index({ loaderData }: Route.ComponentProps) {
               <p className="subtitle">Holdingselskab</p>
             </a>
           </div>
+
+          <button
+            type="button"
+            className={`menu-toggle ${mobileOpen ? "menu-toggle-active" : ""}`}
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-menu"
+            aria-label={mobileOpen ? "Luk menu" : "Åbn menu"}
+          >
+            <span className="menu-toggle-icon menu-toggle-bar" />
+            <span className="menu-toggle-icon menu-toggle-bar" />
+            <span className="menu-toggle-icon menu-toggle-bar" />
+          </button>
+
           <nav className="main-nav" aria-label="Hovedmenu" ref={navRef}>
             <ul className="nav-list">
               {SUBMENUS.map((sub, i) => (
@@ -138,6 +174,38 @@ export default function Index({ loaderData }: Route.ComponentProps) {
               ))}
             </ul>
           </nav>
+        </div>
+
+        <div
+          id="mobile-menu"
+          className={`mobile-menu ${mobileOpen ? "mobile-menu-open" : ""}`}
+          aria-hidden={!mobileOpen}
+        >
+          <div className="mobile-menu-backdrop" onClick={closeMobile} aria-hidden="true" />
+          <div className="mobile-menu-panel">
+            <div className="mobile-menu-header">
+              <span className="mobile-menu-title">Menu</span>
+              <button
+                type="button"
+                className="mobile-menu-close"
+                onClick={closeMobile}
+                aria-label="Luk menu"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <ul className="mobile-menu-list">
+              {MOBILE_MENU_LINKS.map(({ href, label }) => (
+                <li key={href}>
+                  <a href={href} className="mobile-menu-link" onClick={closeMobile}>
+                    {label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </header>
 
