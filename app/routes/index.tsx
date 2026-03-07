@@ -1,146 +1,319 @@
 /**
- * Homepage Route
- *
- * Server-side loader fetches WP front page and site info.
- * Full SEO: Open Graph, Twitter Cards, JSON-LD WebSite schema.
+ * AAAL ApS – One-pager
  */
 import type { Route } from "./+types/index";
-import { Header } from "~/components/Header";
-import { Footer } from "~/components/Footer";
-import { WpContent } from "~/components/WpContent";
-import { JsonLd } from "~/components/JsonLd";
-import { getFrontPage, getSiteInfo } from "~/lib/wp-api";
-import { buildMeta, buildWebsiteJsonLd, buildPageJsonLd, getFeaturedImageUrl, stripHtml } from "~/lib/seo";
-import type { WpPage, WpSiteInfo } from "~/lib/wp-types";
+import { useState, useRef, useEffect } from "react";
 
-// ── Loader ───────────────────────────────────────────────────────────────────
+const META_DESCRIPTION =
+  "AAAL ApS er et dansk holdingselskab med fokus på langsigtet værdiskabelse gennem aktivt ejerskab af selskaber inden for ejendom, drift og digitale forretningsmodeller.";
+const HERO_IMAGE =
+  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&h=800&fit=crop";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const siteUrl = new URL(request.url).origin;
-
-  let page: WpPage | null = null;
-  let siteInfo: WpSiteInfo | null = null;
-  let error: string | null = null;
-
-  try {
-    [page, siteInfo] = await Promise.all([
-      getFrontPage().catch(() => null),
-      getSiteInfo().catch(() => null),
-    ]);
-  } catch {
-    error = "Kunne ikke oprette forbindelse til CMS";
-  }
-
-  return { page, siteInfo, error, siteUrl };
+  const url = new URL(request.url);
+  return { siteUrl: url.origin + url.pathname };
 }
 
-// ── Meta ─────────────────────────────────────────────────────────────────────
-
-export function meta({ data }: Route.MetaArgs) {
-  if (!data) return [{ title: "Velkommen" }];
-
-  const { siteInfo, page, siteUrl } = data;
-  const siteName = siteInfo?.name ?? "Velkommen";
-  const description = page?.excerpt?.rendered
-    ? stripHtml(page.excerpt.rendered)
-    : siteInfo?.description ?? "Velkommen til vores hjemmeside.";
-
+export function links() {
   return [
-    ...buildMeta({
-      title: siteName,
-      description,
-      url: siteUrl,
-      siteName,
-      siteUrl,
-      type: "website",
-      image: page ? getFeaturedImageUrl(page) : undefined,
-      locale: "da_DK",
-    }),
-    { tagName: "link", rel: "canonical", href: siteUrl },
+    { rel: "preload", as: "image", href: HERO_IMAGE },
   ];
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
+export function meta({ data }: Route.MetaArgs) {
+  const title = "AAAL ApS - Holdingselskab";
+  const url = data?.siteUrl ?? "";
+  return [
+    { title },
+    { name: "description", content: META_DESCRIPTION },
+    { property: "og:type", content: "website" },
+    { property: "og:title", content: title },
+    { property: "og:description", content: META_DESCRIPTION },
+    { property: "og:url", content: url },
+    { property: "og:locale", content: "da_DK" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: title },
+    { name: "twitter:description", content: META_DESCRIPTION },
+  ];
+}
+
+const ORGANIZATION_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "AAAL ApS",
+  url: "https://aaal.dk",
+  description: META_DESCRIPTION,
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "Risø Huse 1",
+    addressLocality: "Roskilde",
+    postalCode: "4000",
+    addressCountry: "DK",
+  },
+  email: "kontakt@aaal.dk",
+  telephone: "+4542942602",
+  taxID: "38889206",
+};
+
+const SUBMENUS = [
+  {
+    label: "Om os",
+    links: [
+      { href: "#om-os", label: "Om os" },
+      { href: "#hvem-vi-er", label: "Hvem vi er" },
+      { href: "#vision-mission", label: "Vision & Mission" },
+      { href: "#vaerdier", label: "Værdier" },
+    ],
+  },
+  {
+    label: "Kontakt os",
+    links: [
+      { href: "#kontakt", label: "Kontakt os" },
+      { href: "#samarbejde", label: "Samarbejde" },
+    ],
+  },
+] as const;
 
 export default function Index({ loaderData }: Route.ComponentProps) {
-  const { page, siteInfo, error, siteUrl } = loaderData;
-  const siteName = siteInfo?.name ?? "Velkommen";
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const navRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpenIndex(null);
+    }
+    function onClickOutside(e: MouseEvent) {
+      if (navRef.current && !navRef.current.contains(e.target as Node)) {
+        setOpenIndex(null);
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("click", onClickOutside, true);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("click", onClickOutside, true);
+    };
+  }, []);
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <Header siteName={siteName} />
+    <div className="onepager">
+      <a href="#main-content" className="skip-link">
+        Spring til indhold
+      </a>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_JSON_LD) }}
+      />
+      <header className="site-header">
+        <div className="container header-content">
+          <div className="header-logo">
+            <a href="#" className="logo-link">
+              <h1>AAAL ApS</h1>
+              <p className="subtitle">Holdingselskab</p>
+            </a>
+          </div>
+          <nav className="main-nav" aria-label="Hovedmenu" ref={navRef}>
+            <ul className="nav-list">
+              {SUBMENUS.map((sub, i) => (
+                <li key={sub.label} className="nav-item-with-submenu">
+                  <button
+                    type="button"
+                    className="nav-trigger"
+                    onClick={() => setOpenIndex(openIndex === i ? null : i)}
+                    aria-expanded={openIndex === i}
+                    aria-haspopup="true"
+                  >
+                    {sub.label}
+                  </button>
+                  <ul className="nav-submenu" hidden={openIndex !== i}>
+                    {sub.links.map(({ href, label }) => (
+                      <li key={href}>
+                        <a href={href} className="nav-sublink" onClick={() => setOpenIndex(null)}>
+                          {label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+      </header>
 
-      {/* JSON-LD Structured Data */}
-      <JsonLd data={buildWebsiteJsonLd(siteInfo, siteUrl)} />
-      {page && <JsonLd data={buildPageJsonLd({ page, siteInfo, siteUrl })} />}
+      <section className="hero-image">
+        <div className="hero-image-container">
+          <img
+            src={HERO_IMAGE}
+            alt="Natur der signalerer vækst og stabilitet"
+            width={1920}
+            height={800}
+            fetchPriority="high"
+          />
+          <div className="hero-image-overlay" />
+          <div className="hero-image-content">
+            <div className="container">
+              <h2>Langsigtet ejerskab, ansvarlig kapital, professionel ledelse</h2>
+              <p>AAAL ApS er et dansk holdingselskab med fokus på langsigtet værdiskabelse gennem aktivt ejerskab af selskaber inden for ejendom, drift og digitale forretningsmodeller.</p>
+              <p className="hero-subtext">Vi arbejder struktureret, compliant og med et klart fokus på stabilitet, transparens og bæredygtig vækst.</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <main className="flex-1">
-        {error ? (
-          <ErrorState message={error} />
-        ) : page ? (
-          <article className="animate-fade-in-up">
-            <WpContent html={page.content.rendered} />
-          </article>
-        ) : (
-          <FallbackHero siteName={siteName} />
-        )}
+      <main id="main-content">
+        <section id="om-os" className="about-intro">
+          <div className="container">
+            <h2>Om os</h2>
+            <div className="about-intro-content">
+              <p>AAAL ApS er et dansk holdingselskab, der specialiserer sig i langsigtet ejerskab og strategisk udvikling af virksomheder. Vi bygger på en solid forretningsmodel, der kombinerer professionel ledelse med ansvarlig kapitalforvaltning.</p>
+              <p>Gennem vores datterselskaber arbejder vi aktivt med at skabe værdi og sikre bæredygtig vækst. Vores tilgang er præget af transparens, stabilitet og et langsigtet perspektiv, der gavner både vores porteføljeselskaber og deres interessenter.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="hvem-vi-er" className="about">
+          <div className="container">
+            <h2>Hvem vi er</h2>
+            <div className="about-content">
+              <p>AAAL ApS fungerer som strategisk ejer og governance-platform for koncernforbundne selskaber.</p>
+              <p>Vi understøtter vores porteføljeselskaber med kapital, ledelsesmæssig sparring og klare beslutningsprocesser.</p>
+              <div className="approach-section">
+                <h3>Vores tilgang er præget af:</h3>
+                <div className="approach-grid">
+                  <div className="approach-item">
+                    <div className="approach-image">
+                      <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=600&fit=crop" alt="Professionel selskabsledelse" width={800} height={600} loading="lazy" />
+                      <div className="approach-overlay" />
+                    </div>
+                    <h4>Professionel selskabsledelse</h4>
+                  </div>
+                  <div className="approach-item">
+                    <div className="approach-image">
+                      <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=800&h=600&fit=crop" alt="Klare ejerstrukturer" width={800} height={600} loading="lazy" />
+                      <div className="approach-overlay" />
+                    </div>
+                    <h4>Klare ejerstrukturer</h4>
+                  </div>
+                  <div className="approach-item">
+                    <div className="approach-image">
+                      <img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=600&fit=crop" alt="Ansvarlig risikostyring" width={800} height={600} loading="lazy" />
+                      <div className="approach-overlay" />
+                    </div>
+                    <h4>Ansvarlig risikostyring</h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="vision-mission" className="vision-mission">
+          <div className="container">
+            <div className="vm-grid">
+              <div className="vm-card">
+                <h3>Vision</h3>
+                <p>At være en solid og troværdig ejerplatform, der skaber varig værdi for selskaber, samarbejdspartnere og interessenter gennem disciplineret ejerskab og ansvarlig ledelse.</p>
+              </div>
+              <div className="vm-card">
+                <h3>Mission</h3>
+                <p>Vores mission er at:</p>
+                <ul>
+                  <li>Opbygge og eje sunde selskaber med klare forretningsmodeller</li>
+                  <li>Sikre stabil drift og god governance</li>
+                  <li>Skabe rammerne for kontrolleret vækst og værdiforøgelse</li>
+                  <li>Agere professionel og pålidelig samarbejdspartner</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="vaerdier" className="values">
+          <div className="container">
+            <h2>Værdier</h2>
+            <div className="values-grid">
+              <div className="value-card">
+                <h3>Ansvarlighed</h3>
+                <p>Vi tager ejerskab for beslutninger og konsekvenser</p>
+              </div>
+              <div className="value-card">
+                <h3>Transparens</h3>
+                <p>Klare strukturer og åben kommunikation</p>
+              </div>
+              <div className="value-card">
+                <h3>Stabilitet</h3>
+                <p>Langsigtede løsninger frem for kortsigtede gevinster</p>
+              </div>
+              <div className="value-card">
+                <h3>Professionalitet</h3>
+                <p>Høj standard i ledelse, compliance og samarbejde</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="samarbejde" className="cooperation">
+          <div className="container">
+            <div className="cooperation-card">
+              <h2>Samarbejde</h2>
+              <p>AAAL ApS samarbejder med banker, rådgivere, investorer og driftselskaber på et professionelt og tillidsbaseret grundlag.</p>
+              <p>Vi lægger vægt på klare aftaler, realistiske forventninger og langsigtede relationer.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="datter-selskaber" className="subsidiaries">
+          <div className="container">
+            <h2>Datter selskaber</h2>
+            <div className="companies-grid">
+              <div className="company-card">
+                <h3>AA-Ejendomme ApS</h3>
+                <p>CVR: 38891197</p>
+                <p className="company-description">AA-Ejendomme ApS er et dansk ejendomsselskab, der fokuserer på professionel forvaltning og langsigtet udvikling af ejendomsporteføljen. Vi kombinerer lokal ekspertise med strategisk vision for at skabe bæredygtig værdi for vores partnere og samfundet.</p>
+              </div>
+              <div className="company-card">
+                <h3>ScaleGroup ApS</h3>
+                <p>CVR: 44921995</p>
+                <p className="company-description">Et webureau der leverer digitale løsninger og webudvikling til virksomheder. Vi hjælper kunder med at bygge moderne websites, webapplikationer og digitale platforme der styrker deres online tilstedeværelse.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="kontakt" className="contact">
+          <div className="container">
+            <h2>Kontakt os</h2>
+            <div className="contact-content">
+              <div className="contact-info">
+                <div className="contact-item">
+                  <h3>Adresse</h3>
+                  <p>Risø Huse 1<br />4000 Roskilde<br />Danmark</p>
+                </div>
+                <div className="contact-item">
+                  <h3>E-mail</h3>
+                  <p><a href="mailto:kontakt@aaal.dk">kontakt@aaal.dk</a></p>
+                </div>
+                <div className="contact-item">
+                  <h3>Telefon</h3>
+                  <p><a href="tel:+4542942602">42 94 26 02</a></p>
+                </div>
+                <div className="contact-item">
+                  <h3>CVR-nummer</h3>
+                  <p>38889206</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
 
-      <Footer siteName={siteName} siteDescription={siteInfo?.description} />
-    </div>
-  );
-}
-
-/** Shown when no front page is configured in WordPress yet */
-function FallbackHero({ siteName }: { siteName: string }) {
-  return (
-    <section className="relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-secondary via-secondary to-primary/80" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-accent)_0%,_transparent_60%)] opacity-20" />
-
-      <div className="relative max-w-5xl mx-auto px-6 py-32 md:py-44 text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent mb-6 animate-fade-in-up">
-          Velkommen til
-        </p>
-        <h1
-          className="text-5xl md:text-7xl font-bold text-white mb-8 leading-[1.05] tracking-tight animate-fade-in-up"
-          style={{ animationDelay: "0.1s" }}
-        >
-          {siteName}
-        </h1>
-        <p
-          className="text-lg md:text-xl text-text-on-dark/70 max-w-2xl mx-auto mb-12 leading-relaxed animate-fade-in-up"
-          style={{ animationDelay: "0.2s" }}
-        >
-          Din hjemmeside er ved at blive sat op. Indhold vil snart være
-          tilgængeligt her.
-        </p>
-        <div className="animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
-          <a
-            href="/kontakt"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-white text-secondary font-semibold rounded-full hover:bg-surface-dim transition-all hover:shadow-2xl hover:scale-105 active:scale-95"
-          >
-            Kontakt os
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-          </a>
+      <footer className="site-footer">
+        <div className="container">
+          <p>&copy; 2025 AAAL ApS. Alle rettigheder forbeholdes.</p>
+          <p>CVR: 38889206 | Risø Huse 1, 4000 Roskilde</p>
         </div>
-      </div>
-    </section>
-  );
-}
-
-function ErrorState({ message }: { message: string }) {
-  return (
-    <div className="max-w-2xl mx-auto px-6 py-32 text-center">
-      <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-amber-50 flex items-center justify-center">
-        <svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-      </div>
-      <h2 className="text-2xl font-bold text-secondary mb-3">Indhold utilgængeligt</h2>
-      <p className="text-text-muted">{message}</p>
+      </footer>
     </div>
   );
 }
