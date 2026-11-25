@@ -3,6 +3,7 @@
  */
 import type { Route } from "./+types/index";
 import { useState, useRef, useEffect } from "react";
+import { SITE_URL } from "~/lib/site";
 
 const META_DESCRIPTION =
   "AAAL ApS er et dansk holdingselskab med fokus på langsigtet værdiskabelse gennem aktivt ejerskab af selskaber inden for ejendom, drift og digitale forretningsmodeller.";
@@ -11,7 +12,7 @@ const HERO_IMAGE =
 
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
-  return { siteUrl: url.origin + url.pathname };
+  return { siteUrl: SITE_URL + url.pathname };
 }
 
 export function links() {
@@ -22,9 +23,10 @@ export function links() {
 
 export function meta({ data }: Route.MetaArgs) {
   const title = "AAAL ApS - Holdingselskab";
-  const url = data?.siteUrl ?? "";
+  const url = data?.siteUrl ?? `${SITE_URL}/`;
   return [
     { title },
+    { tagName: "link", rel: "canonical", href: url },
     { name: "description", content: META_DESCRIPTION },
     { property: "og:type", content: "website" },
     { property: "og:title", content: title },
